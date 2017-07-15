@@ -3,3 +3,9 @@
 ################################################################################
 
 /Helper.Data.Core/bin/Debug/netstandard2.0
+/Helper.Data.Core/obj
+/Helper.Data.MSSql/bin/Debug/netstandard2.0
+/Helper.Data.MSSql/obj
+/Helper.Data.MySql/bin/Debug/netstandard2.0
+/Helper.Data.MySql/obj
+/.vs
