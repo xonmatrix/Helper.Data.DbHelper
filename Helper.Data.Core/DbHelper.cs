@@ -25,38 +25,40 @@ namespace Helper.Data
 
         public Task Insert(string tableName, IEnumerable<DbModel> data)
         {
-            using (var cmd = this.createQuery())
+            using (var cmd = this.createCommand())
+            using (var query = new DbQuery(cmd))
             {
                 List<string> values = new List<string>();
                 bool isFirst = true;
-                cmd.Append("INSERT INTO ").Append(tableName);
+                query.Append("INSERT INTO ").Append(tableName);
                 foreach (var d in data)
                 {
                     if (isFirst)
                     {
-                        cmd.Append(" (");
-                        cmd.Append(string.Join(",", d.Data.Keys));
-                        cmd.Append(" ) VALUES ");
+                        query.Append(" (");
+                        query.Append(string.Join(",", d.Data.Keys));
+                        query.Append(" ) VALUES ");
                     }
                     else
-                        cmd.Append(",");
+                        query.Append(",");
 
-                    cmd.Append(" (");
-                    cmd.Append(string.Join(",", d.Data.Values.Select(v => cmd.AppendValue(v))));
-                    cmd.Append(" )");
+                    query.Append(" (");
+                    query.Append(string.Join(",", d.Data.Values.Select(v => query.AppendValue(v))));
+                    query.Append(" )");
                     isFirst = false;
                 }
-                cmd.Append(";");
-                return cmd.ExecuteNonQuery();
+                query.Append(";");
+                return query.ExecuteNonQuery();
             }
         }
 
         public Task Insert(string tableName, object data)
         {
-            using (var cmd = this.createQuery())
+            using (var cmd = this.createCommand())
+            using (var query = new DbQuery(cmd))
             {
-                buildInsertQuery(cmd, tableName, data);
-                return cmd.ExecuteNonQuery();
+                buildInsertQuery(query, tableName, data);
+                return query.ExecuteNonQuery();
             }
         }
 
@@ -134,15 +136,16 @@ namespace Helper.Data
 
         public async Task<int> InsertWithIdentity(string tableName, DbModel data)
         {
-            using (var cmd = this.createQuery())
+            using (var cmd = this.createCommand())
+            using (var query = new DbQuery(cmd))
             {
-                buildInsertQuery(cmd, tableName, data);
+                buildInsertQuery(query, tableName, data);
                 if (engine == SqlEngine.MSSql)
-                    cmd.Append("SELECT SCOPE_IDENTITY();");
+                    query.Append("SELECT SCOPE_IDENTITY();");
                 else if (engine == SqlEngine.MySql)
-                    cmd.Append("SELECT LAST_INSERT_ID();");
+                    query.Append("SELECT LAST_INSERT_ID();");
 
-                return await cmd.Value<int>();
+                return await query.Value<int>();
             }
         }
 
@@ -150,32 +153,34 @@ namespace Helper.Data
 
         public Task Update(string tableName, DbModel data, string condition, params object[] parameters)
         {
-            using (var cmd = this.createQuery())
+            using (var cmd = this.createCommand())
+            using (var query = new DbQuery(cmd))
             {
-                cmd.Append("UPDATE ").Append(tableName).Append(" SET ");
+                query.Append("UPDATE ").Append(tableName).Append(" SET ");
                 bool isFirst = true;
                 foreach (var pair in data.Data)
                 {
                     if (!isFirst)
-                        cmd.Append(",");
+                        query.Append(",");
 
-                    cmd.Append(pair.Key).Append(" = ").Append(cmd.AppendValue(pair.Value));
+                    query.Append(pair.Key).Append(" = ").Append(query.AppendValue(pair.Value));
                     isFirst = false;
                 }
-                cmd.Where(condition, parameters);
-                cmd.Append(";");
-                return cmd.ExecuteNonQuery();
+                query.Where(condition, parameters);
+                query.Append(";");
+                return query.ExecuteNonQuery();
             }
         }
 
         public Task Delete(string tableName, string condition, params object[] parameters)
         {
-            using (var cmd = this.createQuery())
+            using (var cmd = this.createCommand())
+            using (var query = new DbQuery(cmd))
             {
-                cmd.Append("DELETE FROM ").Append(tableName);
-                cmd.Where(condition, parameters);
-                cmd.Append(";");
-                return cmd.ExecuteNonQuery();
+                query.Append("DELETE FROM ").Append(tableName);
+                query.Where(condition, parameters);
+                query.Append(";");
+                return query.ExecuteNonQuery();
             }
         }
 
@@ -183,27 +188,34 @@ namespace Helper.Data
 
         #region Query creation & Execute 
 
-        private DbQuery createQuery()
+
+        private DbCommand createCommand()
         {
             var cmd = this.conn.CreateCommand();
             if (currTransaction != null)
-                cmd.Transaction = this.currTransaction;
-
-            return new DbQuery(cmd);
-        }
-
-        public DbQuery Query(string query, params object[] parameters)
-        {
-            var cmd = this.createQuery();
-            return cmd.Append(query, parameters);
-        }
-
-        public Task Execute(string query, params object[] parameters)
-        {
-            using (var cmd = this.createQuery())
             {
-                cmd.Append(query, parameters);
-                return cmd.ExecuteNonQuery();
+                cmd.Transaction = this.currTransaction;
+            }
+
+            return cmd;
+        }
+
+        public DbQuery Query(string queryString, params object[] parameters)
+        {
+            using (var cmd = this.createCommand())
+            {
+                return new DbQuery(cmd).Append(queryString, parameters);
+            }
+
+        }
+
+        public Task Execute(string queryString, params object[] parameters)
+        {
+            using (var cmd = this.createCommand())
+            using (var query = new DbQuery(cmd))
+            {
+                query.Append(queryString, parameters);
+                return query.ExecuteNonQuery();
             }
         }
 

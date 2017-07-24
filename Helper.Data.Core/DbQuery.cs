@@ -15,7 +15,7 @@ namespace Helper.Data
         {
             this.command = cmd;
         }
- 
+
         #region Command Builder 
 
         protected StringBuilder CommandText { get; private set; } = new StringBuilder();
@@ -40,8 +40,8 @@ namespace Helper.Data
 
             return this;
         }
-        
-        private void appendCommand(string key,object value)
+
+        private void appendCommand(string key, object value)
         {
             var parameter = this.command.CreateParameter();
             parameter.ParameterName = key;
@@ -106,6 +106,7 @@ namespace Helper.Data
             command.CommandText = CommandText.ToString();
             command.CommandType = CommandType.Text;
 
+
             if (command.Connection.State != ConnectionState.Open)
                 command.Connection.Open();
 
@@ -118,6 +119,7 @@ namespace Helper.Data
                         break;
                 }
             }
+
 
         }
 
@@ -264,7 +266,7 @@ namespace Helper.Data
             JObject row = new JObject();
             for (int i = 0; i < reader.FieldCount; i++)
             {
-         
+
                 if (reader.IsDBNull(i))
                     row[reader.GetName(i)] = JValue.CreateNull();
                 else
@@ -275,11 +277,11 @@ namespace Helper.Data
 
         #endregion
 
-        public virtual void Dispose()
+        public void Dispose()
         {
-            this.command.Dispose();
-            this.command = null;
             System.Diagnostics.Debug.WriteLine("Query dispose");
+            this.CommandText = null;
+            this.command = null;
         }
 
     }
