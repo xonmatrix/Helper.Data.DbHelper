@@ -4,12 +4,14 @@ using System.Data;
 using System.Text;
 using System.Threading.Tasks;
 using System.Data.SqlClient;
+using System.Data.Common;
 
 namespace Helper.Data
 {
     public class SqlQuery : DbQuery, IDbQuery
     {
         private SqlCommand cmd;
+     
         public SqlQuery(SqlCommand cmd)
         {
             this.cmd = cmd;

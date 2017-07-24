@@ -5,7 +5,7 @@ VisualStudioVersion = 15.0.26711.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Helper.Data.MySqlHelper", "Helper.Data.MySql\Helper.Data.MySqlHelper.csproj", "{3410B878-0596-451C-B96A-E1BB8423ACE7}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Helper.Data.Core", "Helper.Data.Core\Helper.Data.Core.csproj", "{32F25461-FB3A-4F15-8DCC-1D1282AC2EC4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Helper.Data", "Helper.Data.Core\Helper.Data.csproj", "{32F25461-FB3A-4F15-8DCC-1D1282AC2EC4}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Helper.Data.SqlHelper", "Helper.Data.MSSql\Helper.Data.SqlHelper.csproj", "{483849BA-AA6A-4D5D-AA3A-C26EAD4FA52B}"
 EndProject

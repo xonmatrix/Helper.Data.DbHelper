@@ -8,26 +8,16 @@ using Newtonsoft.Json.Linq;
 
 namespace Helper.Data
 {
-    public abstract class DbHelper : IDisposable
+    public class DbHelper : IDisposable
     {
-        protected bool autoClose = true;
-        protected void buildInsertQuery(IDbQuery cmd, string tableName, DbModel data)
+        private DbConnection conn;
+        private DbTransaction currTransaction;
+        private SqlEngine engine;
+        public DbHelper(DbConnection conn, SqlEngine engine = SqlEngine.MySql)
         {
-            List<string> values = new List<string>();
-            cmd.Append("INSERT INTO ").Append(tableName).Append(" (");
-            bool isFirst = true;
-            foreach (var pair in data.Data)
-            {
-                if (!isFirst)
-                    cmd.Append(",");
-                cmd.Append(pair.Key);
-                values.Add(cmd.AppendValue(pair.Value));
-                isFirst = false;
-            }
-            cmd.Append(") VALUES (").Append(string.Join(",", values)).Append(");");
+            this.conn = conn;
+            this.engine = engine;
         }
-
-     
 
         #region Insert, Update, Delete 
 
@@ -61,7 +51,7 @@ namespace Helper.Data
             }
         }
 
-        public Task Insert(string tableName, DbModel data)
+        public Task Insert(string tableName, object data)
         {
             using (var cmd = this.createQuery())
             {
@@ -70,9 +60,91 @@ namespace Helper.Data
             }
         }
 
+        private void buildInsertQuery(DbQuery cmd, string tableName, object data)
+        {
+            switch (data)
+            {
+                case DbModel dbModel:
+                    this.buildInsertQuery(cmd, tableName, dbModel);
+                    break;
+                case JObject jObject:
+                    this.buildInsertQuery(cmd, tableName, jObject);
+                    break;
+                default:
+                    this.buildInsertQuery(cmd, tableName, JObject.FromObject(data));
+                    break;
+            }
+        }
 
-        protected abstract IDbQuery createQuery();
-        public abstract Task<int> InsertWithIdentity(string tableName, DbModel data);
+        private void buildInsertQuery(DbQuery cmd, string tableName, JObject data)
+        {
+            List<string> values = new List<string>();
+            cmd.Append("INSERT INTO ").Append(tableName).Append(" (");
+            bool isFirst = true;
+            foreach (var pair in data)
+            {
+                if (!isFirst)
+                    cmd.Append(",");
+                cmd.Append(pair.Key);
+                switch (pair.Value.Type)
+                {
+                    case JTokenType.Boolean:
+                        values.Add(cmd.AppendValue(pair.Value.Value<bool>()));
+                        break;
+                    case JTokenType.Bytes:
+                        values.Add(cmd.AppendValue(pair.Value.Value<byte[]>()));
+                        break;
+                    case JTokenType.Date:
+                        values.Add(cmd.AppendValue(pair.Value.Value<DateTime>()));
+                        break;
+                    case JTokenType.Float:
+                        values.Add(cmd.AppendValue(pair.Value.Value<float>()));
+                        break;
+                    case JTokenType.Integer:
+                        values.Add(cmd.AppendValue(pair.Value.Value<int>()));
+                        break;
+                    case JTokenType.String:
+                        values.Add(cmd.AppendValue(pair.Value.Value<string>()));
+                        break;
+                    default:
+                        values.Add(cmd.AppendValue(pair.Value));
+                        break;
+                }
+
+                isFirst = false;
+            }
+            cmd.Append(") VALUES (").Append(string.Join(",", values)).Append(");");
+        }
+
+        private void buildInsertQuery(DbQuery cmd, string tableName, DbModel data)
+        {
+            List<string> values = new List<string>();
+            cmd.Append("INSERT INTO ").Append(tableName).Append(" (");
+            bool isFirst = true;
+            foreach (var pair in data.Data)
+            {
+                if (!isFirst)
+                    cmd.Append(",");
+                cmd.Append(pair.Key);
+                values.Add(cmd.AppendValue(pair.Value));
+                isFirst = false;
+            }
+            cmd.Append(") VALUES (").Append(string.Join(",", values)).Append(");");
+        }
+
+        public async Task<int> InsertWithIdentity(string tableName, DbModel data)
+        {
+            using (var cmd = this.createQuery())
+            {
+                buildInsertQuery(cmd, tableName, data);
+                if (engine == SqlEngine.MSSql)
+                    cmd.Append("SELECT SCOPE_IDENTITY();");
+                else if (engine == SqlEngine.MySql)
+                    cmd.Append("SELECT LAST_INSERT_ID();");
+
+                return await cmd.Value<int>();
+            }
+        }
 
         #endregion
 
@@ -109,10 +181,18 @@ namespace Helper.Data
 
         #endregion
 
+        #region Query creation & Execute 
 
-        #region Query & Execute 
+        private DbQuery createQuery()
+        {
+            var cmd = this.conn.CreateCommand();
+            if (currTransaction != null)
+                cmd.Transaction = this.currTransaction;
 
-        public IDbQuery Query(string query, params object[] parameters)
+            return new DbQuery(cmd);
+        }
+
+        public DbQuery Query(string query, params object[] parameters)
         {
             var cmd = this.createQuery();
             return cmd.Append(query, parameters);
@@ -129,19 +209,57 @@ namespace Helper.Data
 
         #endregion
 
-        #region Connection 
+        #region Trasacion 
 
+        public void BeginTransaction()
+        {
 
-        public abstract void BeginTransaction();
+            if (this.conn.State == ConnectionState.Closed)
+                this.conn.Open();
 
-        public abstract void Commit();
+            this.currTransaction = this.conn.BeginTransaction();
+        }
 
-        public abstract void Rollback();
+        public void Commit()
+        {
+            try
+            {
+                this.currTransaction.Commit();
+            }
+            catch (DbException)
+            {
+                throw;
+            }
+            finally
+            {
+                this.currTransaction.Dispose();
+                this.currTransaction = null;
+            }
+        }
+
+        public void Rollback()
+        {
+            try
+            {
+                this.currTransaction.Rollback();
+            }
+            catch (DbException)
+            {
+                throw;
+            }
+            finally
+            {
+                this.currTransaction.Dispose();
+                this.currTransaction = null;
+            }
+        }
 
         #endregion
 
-        public virtual void Dispose()
+        public void Dispose()
         {
+            this.conn.Dispose();
+            this.conn = null;
             System.Diagnostics.Debug.WriteLine("DbHelper Dispose.");
         }
 

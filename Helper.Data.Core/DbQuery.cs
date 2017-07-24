@@ -5,32 +5,30 @@ using System.Data;
 using System.Threading.Tasks;
 using System.Linq;
 using Newtonsoft.Json.Linq;
-
+using System.Data.Common;
 namespace Helper.Data
 {
-    public abstract class DbQuery : IDbQuery
+    public class DbQuery : IDisposable
     {
-        #region Abstract
-
-        public abstract Task ExecuteReader(Func<IDataReader, bool> rowExecution);
-        public abstract Task ExecuteNonQuery();
-        public abstract void AddCommandParameter(string key, object value);
-        
-        #endregion
-
+        private DbCommand command;
+        public DbQuery(DbCommand cmd)
+        {
+            this.command = cmd;
+        }
+ 
         #region Command Builder 
 
         protected StringBuilder CommandText { get; private set; } = new StringBuilder();
         private int conditionCount = 0;
         private int valueCount = 0;
 
-        public IDbQuery Append(string condition)
+        public DbQuery Append(string condition)
         {
             this.CommandText.Append(condition);
             return this;
         }
 
-        public IDbQuery Append(string condition, params object[] parameters)
+        public DbQuery Append(string condition, params object[] parameters)
         {
             if (parameters != null && parameters.Length > 0)
             {
@@ -42,11 +40,19 @@ namespace Helper.Data
 
             return this;
         }
+        
+        private void appendCommand(string key,object value)
+        {
+            var parameter = this.command.CreateParameter();
+            parameter.ParameterName = key;
+            parameter.Value = value;
+            this.command.Parameters.Add(parameter);
+        }
 
         public string AppendCondition(object value)
         {
             string key = $"@Cond{conditionCount++}";
-            this.AddCommandParameter(key, value);
+            this.appendCommand(key, value);
             return key;
         }
 
@@ -56,39 +62,77 @@ namespace Helper.Data
             {
                 return t.Expression;
             }
-            else if(value is JObject j)
-            {
-                string key = $"@Va{valueCount++}";
-                this.AddCommandParameter(key, j.ToString());
-                return key;
-            }
-            else if (value is JArray ja)
-            {
-                string key = $"@Va{valueCount++}";
-                this.AddCommandParameter(key, ja.ToString());
-                return key;
-            }
             else
             {
                 string key = $"@Va{valueCount++}";
-                this.AddCommandParameter(key, value);
+                switch (value)
+                {
+                    case JObject jo:
+                        this.appendCommand(key, jo.ToString());
+                        break;
+                    case JArray ja:
+                        this.appendCommand(key, ja.ToString());
+                        break;
+                    default:
+                        this.appendCommand(key, value);
+                        break;
+                }
+
                 return key;
+
             }
         }
 
-        public IDbQuery Where(string query, params object[] parameters)
+        public DbQuery Where(string query, params object[] parameters)
         {
             this.Append(" WHERE ");
             this.Append(query, parameters);
             return this;
         }
 
-        public IDbQuery And(string query, params object[] parameters)
+        public DbQuery And(string query, params object[] parameters)
         {
             this.Append(" AND ");
             this.Append(query, parameters);
             return this;
         }
+
+        #endregion
+
+        #region Execution
+
+        public async Task ExecuteReader(Func<IDataReader, bool> rowExecution)
+        {
+            command.CommandText = CommandText.ToString();
+            command.CommandType = CommandType.Text;
+
+            if (command.Connection.State != ConnectionState.Open)
+                command.Connection.Open();
+
+
+            using (var reader = await command.ExecuteReaderAsync().ConfigureAwait(false))
+            {
+                while (reader.Read())
+                {
+                    if (!rowExecution(reader))
+                        break;
+                }
+            }
+
+        }
+
+        public Task ExecuteNonQuery()
+        {
+
+            command.CommandText = CommandText.ToString();
+            command.CommandType = CommandType.Text;
+
+            if (command.Connection.State != ConnectionState.Open)
+                command.Connection.Open();
+
+            return command.ExecuteNonQueryAsync();
+        }
+
 
         #endregion
 
@@ -233,7 +277,9 @@ namespace Helper.Data
 
         public virtual void Dispose()
         {
-            //
+            this.command.Dispose();
+            this.command = null;
+            System.Diagnostics.Debug.WriteLine("Query dispose");
         }
 
     }
