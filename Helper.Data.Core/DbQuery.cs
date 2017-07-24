@@ -15,6 +15,7 @@ namespace Helper.Data
         public abstract Task ExecuteReader(Func<IDataReader, bool> rowExecution);
         public abstract Task ExecuteNonQuery();
         public abstract void AddCommandParameter(string key, object value);
+        
         #endregion
 
         #region Command Builder 
@@ -25,7 +26,8 @@ namespace Helper.Data
 
         public IDbQuery Append(string condition)
         {
-            return this.Append(condition);
+            this.CommandText.Append(condition);
+            return this;
         }
 
         public IDbQuery Append(string condition, params object[] parameters)
@@ -53,6 +55,18 @@ namespace Helper.Data
             if (value is DbExpression t)
             {
                 return t.Expression;
+            }
+            else if(value is JObject j)
+            {
+                string key = $"@Va{valueCount++}";
+                this.AddCommandParameter(key, j.ToString());
+                return key;
+            }
+            else if (value is JArray ja)
+            {
+                string key = $"@Va{valueCount++}";
+                this.AddCommandParameter(key, ja.ToString());
+                return key;
             }
             else
             {
@@ -206,7 +220,11 @@ namespace Helper.Data
             JObject row = new JObject();
             for (int i = 0; i < reader.FieldCount; i++)
             {
-                row[reader.GetName(i)] = new JValue(reader.GetValue(i));
+         
+                if (reader.IsDBNull(i))
+                    row[reader.GetName(i)] = JValue.CreateNull();
+                else
+                    row[reader.GetName(i)] = new JValue(reader.GetValue(i));
             }
             return row;
         }

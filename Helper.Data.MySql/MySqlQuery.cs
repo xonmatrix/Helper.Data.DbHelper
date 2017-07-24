@@ -4,6 +4,7 @@ using System.Data;
 using System.Text;
 using System.Threading.Tasks;
 using MySql.Data.MySqlClient;
+using Newtonsoft.Json.Linq;
 
 namespace Helper.Data
 {
@@ -22,22 +23,14 @@ namespace Helper.Data
 
         public async override Task ExecuteNonQuery()
         {
-            try
-            {
-                cmd.CommandText = CommandText.ToString();
-                cmd.CommandType = CommandType.Text;
 
-                if (cmd.Connection.State != ConnectionState.Open)
-                    cmd.Connection.Open();
+            cmd.CommandText = CommandText.ToString();
+            cmd.CommandType = CommandType.Text;
 
-                await cmd.ExecuteNonQueryAsync().ConfigureAwait(false);
-            }
-            catch (MySqlException ex)
-            {
+            if (cmd.Connection.State != ConnectionState.Open)
+                cmd.Connection.Open();
 
-                //AUTO rool back
-                throw new DbException(ex);
-            }
+            await cmd.ExecuteNonQueryAsync().ConfigureAwait(false);
         }
 
         public async override Task ExecuteReader(Func<IDataReader, bool> rowExecution)
@@ -45,30 +38,28 @@ namespace Helper.Data
             cmd.CommandText = CommandText.ToString();
             cmd.CommandType = CommandType.Text;
 
-            try
+            if (cmd.Connection.State != ConnectionState.Open)
+                cmd.Connection.Open();
+
+
+            using (var reader = await cmd.ExecuteReaderAsync().ConfigureAwait(false))
             {
-                if (cmd.Connection.State != ConnectionState.Open)
-                    cmd.Connection.Open();
-
-
-                using (var reader = await cmd.ExecuteReaderAsync().ConfigureAwait(false))
+                while (reader.Read())
                 {
-                    while (reader.Read())
-                    {
-                        if (!rowExecution(reader))
-                            break;
-                    }
+                    if (!rowExecution(reader))
+                        break;
                 }
             }
-            catch (MySqlException ex)
-            {
-                throw new DbException(ex);
-            }
+
         }
 
         public override void Dispose()
         {
-            this.cmd = null;
+            if (this.cmd != null)
+            {
+                this.cmd.Dispose();
+                this.cmd = null;
+            }
             base.Dispose();
         }
     }

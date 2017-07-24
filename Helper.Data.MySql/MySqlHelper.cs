@@ -40,28 +40,20 @@ namespace Helper.Data
 
         protected override IDbQuery createQuery()
         {
-            using (var cmd = this.connection.CreateCommand())
-            {
-                if (this.currTransaction != null)
-                    cmd.Transaction = this.currTransaction;
+            var cmd = this.connection.CreateCommand();
+            if (this.currTransaction != null)
+                cmd.Transaction = this.currTransaction;
 
-                return new MySqlQuery(cmd);
-            }
+            return new MySqlQuery(cmd);
         }
 
         public override void BeginTransaction()
         {
-            try
-            {
-                if (this.connection.State == ConnectionState.Closed)
-                    this.connection.Open();
 
-                this.currTransaction = this.connection.BeginTransaction();
-            }
-            catch (MySqlException e)
-            {
-                throw new DbException(e);
-            }
+            if (this.connection.State == ConnectionState.Closed)
+                this.connection.Open();
+
+            this.currTransaction = this.connection.BeginTransaction();
         }
 
         public override void Commit()
@@ -72,7 +64,7 @@ namespace Helper.Data
             }
             catch (MySqlException e)
             {
-                throw new DbException(e);
+                throw;
             }
             finally
             {
@@ -89,7 +81,7 @@ namespace Helper.Data
             }
             catch (MySqlException e)
             {
-                throw new DbException(e);
+                throw;
             }
             finally
             {
@@ -100,6 +92,7 @@ namespace Helper.Data
 
         public override void Dispose()
         {
+            System.Diagnostics.Debug.WriteLine("MysqlHelper Dispose.");
             this.connection.Dispose();
             this.connection = null;
             base.Dispose();

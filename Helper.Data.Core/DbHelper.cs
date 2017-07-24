@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using System.Data.Common;
 using System.Data;
 using System.Linq;
+using Newtonsoft.Json.Linq;
 
 namespace Helper.Data
 {
@@ -25,6 +26,8 @@ namespace Helper.Data
             }
             cmd.Append(") VALUES (").Append(string.Join(",", values)).Append(");");
         }
+
+     
 
         #region Insert, Update, Delete 
 
@@ -66,6 +69,7 @@ namespace Helper.Data
                 return cmd.ExecuteNonQuery();
             }
         }
+
 
         protected abstract IDbQuery createQuery();
         public abstract Task<int> InsertWithIdentity(string tableName, DbModel data);
@@ -110,13 +114,9 @@ namespace Helper.Data
 
         public IDbQuery Query(string query, params object[] parameters)
         {
-            using (var cmd = this.createQuery())
-            {
-                return cmd.Append(query, parameters);
-            }
+            var cmd = this.createQuery();
+            return cmd.Append(query, parameters);
         }
-
-
 
         public Task Execute(string query, params object[] parameters)
         {
@@ -142,9 +142,10 @@ namespace Helper.Data
 
         public virtual void Dispose()
         {
+            System.Diagnostics.Debug.WriteLine("DbHelper Dispose.");
         }
 
     }
 
-    
+
 }
