@@ -11,6 +11,7 @@ namespace Helper.Data
     public class DbQuery : IDisposable
     {
         private DbCommand command;
+        private List<string> jsonFields;
         public DbQuery(DbCommand cmd)
         {
             this.command = cmd;
@@ -151,9 +152,14 @@ namespace Helper.Data
             return result;
         }
 
-        public Task<T> SingleOrDefault<T>()
+        public async Task<T> SingleOrDefault<T>()
         {
-            return this.SingleOrDefault<T>(reader => mapFieldValue<T>(reader, 0));
+            if (typeof(T) == typeof(JObject))
+            {
+                return (T)(object)await this.SingleOrDefault(mapToJObject);
+            }
+            else
+                return await this.SingleOrDefault<T>(reader => mapFieldValue<T>(reader, 0));
         }
 
         public Task<DbModel> SingleOrDefault()
@@ -230,6 +236,19 @@ namespace Helper.Data
 
         #endregion
 
+        #region Transformation
+
+        public DbQuery WithJsonField(params string[] fieldName)
+        {
+            if (jsonFields == null)
+                jsonFields = new List<string>();
+
+            jsonFields.AddRange(fieldName.Select(a => a.ToLower()));
+            return this;
+        }
+
+        #endregion
+
         #region Mapper
 
         private T mapFieldValue<T>(IDataReader reader, int index)
@@ -240,9 +259,11 @@ namespace Helper.Data
             switch (Type.GetTypeCode(typeof(T)))
             {
                 case TypeCode.Int32:
-                    return (T)(object)reader.GetValue(index);
+                    return (T)(object)reader.GetInt32(index);
                 case TypeCode.String:
                     return (T)(object)reader.GetValue(index);
+                case TypeCode.Object:
+                    return (T)reader.GetValue(index);
                 default:
                     return (T)reader.GetValue(index);
             }
@@ -255,6 +276,8 @@ namespace Helper.Data
             {
                 if (reader.IsDBNull(i))
                     result[reader.GetName(i)] = null;
+                else if (isJsonField(reader.GetName(i)))
+                    result[reader.GetName(i)] = JObject.Parse(reader.GetString(i));
                 else
                     result[reader.GetName(i)] = reader[i];
             }
@@ -266,13 +289,21 @@ namespace Helper.Data
             JObject row = new JObject();
             for (int i = 0; i < reader.FieldCount; i++)
             {
-
                 if (reader.IsDBNull(i))
                     row[reader.GetName(i)] = JValue.CreateNull();
+                else if (isJsonField(reader.GetName(i)))
+                    row[reader.GetName(i)] = JObject.Parse(reader.GetString(i));
                 else
                     row[reader.GetName(i)] = new JValue(reader.GetValue(i));
             }
             return row;
+        }
+
+        private bool isJsonField(string fieldName)
+        {
+            if (this.jsonFields == null)
+                return false;
+            else return this.jsonFields.Contains(fieldName.ToLower());
         }
 
         #endregion
