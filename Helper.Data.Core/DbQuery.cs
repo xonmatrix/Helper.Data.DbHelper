@@ -292,7 +292,7 @@ namespace Helper.Data
                 if (reader.IsDBNull(i))
                     row[reader.GetName(i)] = JValue.CreateNull();
                 else if (isJsonField(reader.GetName(i)))
-                    row[reader.GetName(i)] = JObject.Parse(reader.GetString(i));
+                    row[reader.GetName(i)] = JValue.Parse(reader.GetString(i));
                 else
                     row[reader.GetName(i)] = new JValue(reader.GetValue(i));
             }
