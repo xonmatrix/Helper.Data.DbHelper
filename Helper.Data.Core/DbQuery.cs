@@ -277,7 +277,7 @@ namespace Helper.Data
                 if (reader.IsDBNull(i))
                     result[reader.GetName(i)] = null;
                 else if (isJsonField(reader.GetName(i)))
-                    result[reader.GetName(i)] = JObject.Parse(reader.GetString(i));
+                    result[reader.GetName(i)] = JValue.Parse(reader.GetString(i));
                 else
                     result[reader.GetName(i)] = reader[i];
             }
