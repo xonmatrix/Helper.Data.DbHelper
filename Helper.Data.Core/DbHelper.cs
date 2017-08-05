@@ -12,11 +12,11 @@ namespace Helper.Data
     {
         private DbConnection conn;
         private DbTransaction currTransaction;
-        private SqlEngine engine;
+        public SqlEngine DbEngine;
         public DbHelper(DbConnection conn, SqlEngine engine = SqlEngine.MySql)
         {
             this.conn = conn;
-            this.engine = engine;
+            this.DbEngine = engine;
         }
 
         #region Insert, Update, Delete 
@@ -140,9 +140,9 @@ namespace Helper.Data
             using (var query = new DbQuery(cmd))
             {
                 buildInsertQuery(query, tableName, data);
-                if (engine == SqlEngine.MSSql)
+                if (this.DbEngine == SqlEngine.MSSql)
                     query.Append("SELECT SCOPE_IDENTITY();");
-                else if (engine == SqlEngine.MySql)
+                else if (this.DbEngine == SqlEngine.MySql)
                     query.Append("SELECT LAST_INSERT_ID();");
 
                 return await query.Value<int>();
