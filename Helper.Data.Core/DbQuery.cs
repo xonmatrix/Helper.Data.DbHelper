@@ -102,7 +102,7 @@ namespace Helper.Data
 
         #region Execution
 
-        public async Task ExecuteReader(Func<IDataReader, bool> rowExecution)
+        public async Task ExecuteReader(Func<DbDataReader, bool> rowExecution)
         {
             command.CommandText = CommandText.ToString();
             command.CommandType = CommandType.Text;
@@ -141,7 +141,7 @@ namespace Helper.Data
 
         #region SingleOrDefault , Value , Any
 
-        public async Task<T> SingleOrDefault<T>(Func<IDataReader, T> map)
+        public async Task<T> SingleOrDefault<T>(Func<DbDataReader, T> map)
         {
             T result = default(T);
             await this.ExecuteReader((reader) =>
@@ -188,7 +188,7 @@ namespace Helper.Data
 
         #region ToList, Select 
 
-        public async Task<List<T>> Select<T>(Func<IDataReader, T> rowReader)
+        public async Task<List<T>> Select<T>(Func<DbDataReader, T> rowReader)
         {
 
             List<T> results = new List<T>();
@@ -251,7 +251,7 @@ namespace Helper.Data
 
         #region Mapper
 
-        private T mapFieldValue<T>(IDataReader reader, int index)
+        private T mapFieldValue<T>(DbDataReader reader, int index)
         {
             if (reader.IsDBNull(index))
                 return default(T);
@@ -269,7 +269,7 @@ namespace Helper.Data
             }
         }
 
-        private DbModel mapToDbModel(IDataReader reader)
+        private DbModel mapToDbModel(DbDataReader reader)
         {
             DbModel result = new DbModel();
             for (int i = 0; i < reader.FieldCount; i++)
@@ -284,7 +284,7 @@ namespace Helper.Data
             return result;
         }
 
-        private JObject mapToJObject(IDataReader reader)
+        private JObject mapToJObject(DbDataReader reader)
         {
             JObject row = new JObject();
             for (int i = 0; i < reader.FieldCount; i++)
