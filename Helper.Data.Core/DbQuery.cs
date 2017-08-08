@@ -222,12 +222,17 @@ namespace Helper.Data
             return this.SingleOrDefault(mapToJObject);
         }
 
-        public async Task<JArray> ToJArray()
+        public Task<JArray> ToJArray()
+        {
+            return ToJArray(mapToJObject);
+        }
+
+        public async Task<JArray> ToJArray(Func<DbDataReader,JToken> map)
         {
             JArray results = new JArray();
             await this.ExecuteReader((r) =>
             {
-                results.Add(mapToJObject(r));
+                results.Add(map(r));
                 return true;
             }).ConfigureAwait(false);
 
