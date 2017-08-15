@@ -3,21 +3,24 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Newtonsoft.Json.Linq;
+using System.Threading.Tasks;
 
 namespace Helper.Data
 {
     public class DbCompare
     {
-        private DbModel source;
-        private DbModel destination;
         private Dictionary<string, string> DictMatchFields { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         private Dictionary<string, Func<object, object>> DictMapFields = new Dictionary<string, Func<object, object>>();
+        private List<string> ignoredColumns = new List<string>();
 
-        public DbCompare(DbModel sourceModel, DbModel destinationModel, Dictionary<string, string> dictMatchFields = null)
+        public DbCompare(Dictionary<string, string> dictMatchFields = null)
         {
-            this.source = sourceModel;
-            this.destination = destinationModel;
             this.DictMatchFields = dictMatchFields;
+        }
+
+        public void IgnoreProperty(params string[] propertyName)
+        {
+            this.ignoredColumns.AddRange(propertyName);
         }
 
         public string MapField(string fieldName)
@@ -35,62 +38,121 @@ namespace Helper.Data
         public DbCompare MapValue(string key, Func<object, object> value)
         {
             DictMapFields.Add(key, value);
-
             return this;
         }
 
-        public Tuple<DbModel, DbModel> CompareDbModels()
+        public Tuple<DbModel, DbModel> CompareDbModels(DbModel source, DbModel destination)
         {
+            //remove all ignored key.
+            if (source != null)
+            {
+                foreach (var key in source.Data.Keys.ToArray().Intersect(this.ignoredColumns))
+                    source.Data.Remove(key);
+            }
+
+            if (destination != null)
+            {
+                foreach (var key in destination.Data.Keys.ToArray().Intersect(this.ignoredColumns))
+                    destination.Data.Remove(key);
+            }
+
+
             var diffSource = new DbModel();
             var diffDestination = new DbModel();
 
             Tuple<DbModel, DbModel> compareResult = new Tuple<DbModel, DbModel>(diffSource, diffDestination);
-
             //left to right compare
-            var sourceKeys = source.Data.Keys.Except(destination.Data.Keys);    //source has desti no
-            foreach (var sourceKey in sourceKeys)
+            if (source != null)
             {
-                var sourceData = source[sourceKey];
+                var sourceKeys = source.Data.Keys.Select(a => a.ToString());
 
-                if (DictMapFields.TryGetValue(sourceKey, out Func<object, object> Map))
+                if (destination != null)
+                    sourceKeys = sourceKeys.Except(destination.Data.Keys);    //source has desti no
+
+                foreach (var sourceKey in sourceKeys)
                 {
-                    diffSource[MapField(sourceKey)] = Map(sourceData);
-                    diffDestination[MapField(sourceKey)] = null;    //destinationData = null
-                }
-                else
-                {
-                    diffSource[MapField(sourceKey)] = sourceData;
-                    diffDestination[MapField(sourceKey)] = null;
+                    var sourceData = source[sourceKey];
+                    addDiff(sourceKey, sourceData, null);
+                    /*
+                    if (DictMapFields.TryGetValue(sourceKey, out Func<object, object> Map))
+                    {
+                        diffSource[MapField(sourceKey)] = Map(sourceData);
+                        diffDestination[MapField(sourceKey)] = null;    //destinationData = null
+                    }
+                    else
+                    {
+                        diffSource[MapField(sourceKey)] = sourceData;
+                        diffDestination[MapField(sourceKey)] = null;
+                    }*/
                 }
             }
 
             //right to left compare
-            var xDestinationKeys = destination.Data.Keys.Except(source.Data.Keys, StringComparer.OrdinalIgnoreCase);  //desti has source no
-            foreach (var xDestinationKey in xDestinationKeys)
+            if (destination != null)
             {
-                var destinationData = destination[xDestinationKey];
+                var xDestinationKeys = destination.Data.Keys.Select(a => a.ToString());
+                if (source != null)
+                    xDestinationKeys = xDestinationKeys.Except(source.Data.Keys, StringComparer.OrdinalIgnoreCase);  //desti has source no
 
-                if (DictMapFields.TryGetValue(xDestinationKey, out Func<object, object> Map))
+                foreach (var xDestinationKey in xDestinationKeys)
                 {
-                    diffDestination[MapField(xDestinationKey)] = Map(destinationData);
-                    diffSource[MapField(xDestinationKey)] = null;    //destinationData = null
-                }
-                else
-                {
-                    diffDestination[MapField(xDestinationKey)] = destinationData;
-                    diffSource[MapField(xDestinationKey)] = null;
+                    var destinationData = destination[xDestinationKey];
+                    addDiff(xDestinationKey, null, destinationData);
+                    /*
+                    if (DictMapFields.TryGetValue(xDestinationKey, out Func<object, object> Map))
+                    {
+                        diffDestination[MapField(xDestinationKey)] = Map(destinationData);
+                        diffSource[MapField(xDestinationKey)] = null;    //destinationData = null
+                    }
+                    else
+                    {
+                        diffDestination[MapField(xDestinationKey)] = destinationData;
+                        diffSource[MapField(xDestinationKey)] = null;
+                    }*/
                 }
             }
 
             //cross compare for same fields
-            var intersectKeys = source.Data.Keys.Intersect(destination.Data.Keys);
-            foreach (var intersectKey in intersectKeys)
+            if (source != null && destination != null)
             {
-                var sourceData = source[intersectKey];
-                var destinationData = destination[intersectKey];
-                if (sourceData is IComparable)
+                var intersectKeys = source.Data.Keys.Intersect(destination.Data.Keys);
+                foreach (var intersectKey in intersectKeys)
                 {
-                    if (((IComparable)sourceData).CompareTo(destinationData) != 0)    //different value, need to record
+                    var sourceData = source[intersectKey];
+                    var destinationData = destination[intersectKey];
+                    if (isDiff(sourceData, destinationData))
+                    {
+                        addDiff(intersectKey, sourceData, destinationData);
+                    }
+                    //cater for null value.
+                    /*
+                    if(sourceData == null && destinationData != null)
+                    {
+                        addDiff(intersectKey, sourceData, destinationData);
+                        diffSource[MapField(intersectKey)] = null;
+                        diffDestination[MapField(intersectKey)] = Map(destinationData);
+                    }
+                    else if(sourceData != null && destinationData == null)
+                    {
+
+                    }
+                    else if (sourceData is IComparable)
+                    {
+                        if (((IComparable)sourceData).CompareTo(destinationData) != 0)    //different value, need to record
+                        {
+                            if (DictMapFields.TryGetValue(intersectKey, out Func<object, object> Map))
+                            {
+                                diffSource[MapField(intersectKey)] = Map(sourceData);
+                                diffDestination[MapField(intersectKey)] = Map(destinationData);
+                            }
+                            else
+                            {
+                                diffSource[MapField(intersectKey)] = sourceData;
+                                diffDestination[MapField(intersectKey)] = destinationData;
+                            }
+                        }
+                    }
+                    else if (!sourceData.Equals(destinationData)) //different value, need to record
                     {
                         if (DictMapFields.TryGetValue(intersectKey, out Func<object, object> Map))
                         {
@@ -102,20 +164,7 @@ namespace Helper.Data
                             diffSource[MapField(intersectKey)] = sourceData;
                             diffDestination[MapField(intersectKey)] = destinationData;
                         }
-                    }
-                }
-                else if (!sourceData.Equals(destinationData)) //different value, need to record
-                {
-                    if (DictMapFields.TryGetValue(intersectKey, out Func<object, object> Map))
-                    {
-                        diffSource[MapField(intersectKey)] = Map(sourceData);
-                        diffDestination[MapField(intersectKey)] = Map(destinationData);
-                    }
-                    else
-                    {
-                        diffSource[MapField(intersectKey)] = sourceData;
-                        diffDestination[MapField(intersectKey)] = destinationData;
-                    }
+                    } */
                 }
             }
             #region obsolete
@@ -185,6 +234,33 @@ namespace Helper.Data
             //}
             #endregion
             return compareResult;
+
+            bool isDiff(object sourceVal, object destVal)
+            {
+                if (sourceVal == null && destVal != null)
+                    return true;
+                if (destVal == null && sourceVal != null)
+                    return true;
+                if (destVal == null && sourceVal == null)
+                    return false;
+                if (sourceVal is IComparable)
+                    return (((IComparable)sourceVal).CompareTo(destVal) != 0);
+                return !sourceVal.Equals(destVal);
+            }
+
+            void addDiff(string key, object sourceVal, object destVal)
+            {
+                var hasMap = DictMapFields.TryGetValue(key, out Func<object, object> Map);
+                if (hasMap && sourceVal != null)
+                    diffSource[MapField(key)] = Map(sourceVal);
+                else
+                    diffSource[MapField(key)] = sourceVal;
+
+                if (hasMap && destVal != null)
+                    diffDestination[MapField(key)] = Map(destVal);
+                else
+                    diffDestination[MapField(key)] = destVal;
+            }
         }
     }
 }
