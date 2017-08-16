@@ -72,18 +72,7 @@ namespace Helper.Data
                 foreach (var sourceKey in sourceKeys)
                 {
                     var sourceData = source[sourceKey];
-                    addDiff(sourceKey, sourceData, null);
-                    /*
-                    if (DictMapFields.TryGetValue(sourceKey, out Func<object, object> Map))
-                    {
-                        diffSource[MapField(sourceKey)] = Map(sourceData);
-                        diffDestination[MapField(sourceKey)] = null;    //destinationData = null
-                    }
-                    else
-                    {
-                        diffSource[MapField(sourceKey)] = sourceData;
-                        diffDestination[MapField(sourceKey)] = null;
-                    }*/
+                    addDiff(sourceKey, sourceData, null,true);
                 }
             }
 
@@ -97,18 +86,7 @@ namespace Helper.Data
                 foreach (var xDestinationKey in xDestinationKeys)
                 {
                     var destinationData = destination[xDestinationKey];
-                    addDiff(xDestinationKey, null, destinationData);
-                    /*
-                    if (DictMapFields.TryGetValue(xDestinationKey, out Func<object, object> Map))
-                    {
-                        diffDestination[MapField(xDestinationKey)] = Map(destinationData);
-                        diffSource[MapField(xDestinationKey)] = null;    //destinationData = null
-                    }
-                    else
-                    {
-                        diffDestination[MapField(xDestinationKey)] = destinationData;
-                        diffSource[MapField(xDestinationKey)] = null;
-                    }*/
+                    addDiff(xDestinationKey, null, destinationData,true);
                 }
             }
 
@@ -121,50 +99,7 @@ namespace Helper.Data
                     var sourceData = source[intersectKey];
                     var destinationData = destination[intersectKey];
                     if (isDiff(sourceData, destinationData))
-                    {
-                        addDiff(intersectKey, sourceData, destinationData);
-                    }
-                    //cater for null value.
-                    /*
-                    if(sourceData == null && destinationData != null)
-                    {
-                        addDiff(intersectKey, sourceData, destinationData);
-                        diffSource[MapField(intersectKey)] = null;
-                        diffDestination[MapField(intersectKey)] = Map(destinationData);
-                    }
-                    else if(sourceData != null && destinationData == null)
-                    {
-
-                    }
-                    else if (sourceData is IComparable)
-                    {
-                        if (((IComparable)sourceData).CompareTo(destinationData) != 0)    //different value, need to record
-                        {
-                            if (DictMapFields.TryGetValue(intersectKey, out Func<object, object> Map))
-                            {
-                                diffSource[MapField(intersectKey)] = Map(sourceData);
-                                diffDestination[MapField(intersectKey)] = Map(destinationData);
-                            }
-                            else
-                            {
-                                diffSource[MapField(intersectKey)] = sourceData;
-                                diffDestination[MapField(intersectKey)] = destinationData;
-                            }
-                        }
-                    }
-                    else if (!sourceData.Equals(destinationData)) //different value, need to record
-                    {
-                        if (DictMapFields.TryGetValue(intersectKey, out Func<object, object> Map))
-                        {
-                            diffSource[MapField(intersectKey)] = Map(sourceData);
-                            diffDestination[MapField(intersectKey)] = Map(destinationData);
-                        }
-                        else
-                        {
-                            diffSource[MapField(intersectKey)] = sourceData;
-                            diffDestination[MapField(intersectKey)] = destinationData;
-                        }
-                    } */
+                        addDiff(intersectKey, sourceData, destinationData,false);
                 }
             }
             #region obsolete
@@ -248,17 +183,18 @@ namespace Helper.Data
                 return !sourceVal.Equals(destVal);
             }
 
-            void addDiff(string key, object sourceVal, object destVal)
+            void addDiff(string key, object sourceVal, object destVal,bool oneSideCompare)
             {
                 var hasMap = DictMapFields.TryGetValue(key, out Func<object, object> Map);
+                
                 if (hasMap && sourceVal != null)
                     diffSource[MapField(key)] = Map(sourceVal);
-                else
+                else if(!oneSideCompare)
                     diffSource[MapField(key)] = sourceVal;
 
                 if (hasMap && destVal != null)
                     diffDestination[MapField(key)] = Map(destVal);
-                else
+                else if (!oneSideCompare)
                     diffDestination[MapField(key)] = destVal;
             }
         }
