@@ -189,12 +189,12 @@ namespace Helper.Data
                 
                 if (hasMap && sourceVal != null)
                     diffSource[MapField(key)] = Map(sourceVal);
-                else if(!oneSideCompare)
+                else if(oneSideCompare)
                     diffSource[MapField(key)] = sourceVal;
 
                 if (hasMap && destVal != null)
                     diffDestination[MapField(key)] = Map(destVal);
-                else if (!oneSideCompare)
+                else if (oneSideCompare)
                     diffDestination[MapField(key)] = destVal;
             }
         }
