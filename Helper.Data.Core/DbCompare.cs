@@ -23,6 +23,12 @@ namespace Helper.Data
             this.ignoredColumns.AddRange(propertyName);
         }
 
+        public void AddMatchField(string val1, string val2)
+        {
+            if(!DictMatchFields.ContainsKey(val1))
+                this.DictMatchFields.Add(val1, val2);
+        }
+
         public string MapField(string fieldName)
         {
             if (DictMatchFields.TryGetValue(fieldName, out string val))
@@ -71,8 +77,9 @@ namespace Helper.Data
 
                 foreach (var sourceKey in sourceKeys)
                 {
-                    var sourceData = source[sourceKey];
-                    addDiff(sourceKey, sourceData, null,true);
+                    //var sourceData = source[sourceKey];
+                    var sourceData = (source[sourceKey] is DateTime) ? FormatDateTimeObjectToString((DateTime)source[sourceKey]) : source[sourceKey];
+                    addDiff(sourceKey, sourceData, null, "source");
                 }
             }
 
@@ -85,8 +92,9 @@ namespace Helper.Data
 
                 foreach (var xDestinationKey in xDestinationKeys)
                 {
-                    var destinationData = destination[xDestinationKey];
-                    addDiff(xDestinationKey, null, destinationData,true);
+                    //var destinationData = destination[xDestinationKey];
+                    var destinationData = (destination[xDestinationKey] is DateTime) ? FormatDateTimeObjectToString((DateTime)destination[xDestinationKey]) : destination[xDestinationKey];
+                    addDiff(xDestinationKey, null, destinationData, "destination");
                 }
             }
 
@@ -96,10 +104,10 @@ namespace Helper.Data
                 var intersectKeys = source.Data.Keys.Intersect(destination.Data.Keys);
                 foreach (var intersectKey in intersectKeys)
                 {
-                    var sourceData = source[intersectKey];
-                    var destinationData = destination[intersectKey];
+                    var sourceData = (source[intersectKey] is DateTime)? FormatDateTimeObjectToString((DateTime)source[intersectKey]) : source[intersectKey];
+                    var destinationData = (destination[intersectKey] is DateTime) ? FormatDateTimeObjectToString((DateTime)destination[intersectKey]) : destination[intersectKey];
                     if (isDiff(sourceData, destinationData))
-                        addDiff(intersectKey, sourceData, destinationData,false);
+                        addDiff(intersectKey, sourceData, destinationData, "both");
                 }
             }
             #region obsolete
@@ -183,10 +191,27 @@ namespace Helper.Data
                 return !sourceVal.Equals(destVal);
             }
 
-            void addDiff(string key, object sourceVal, object destVal,bool oneSideCompare)
+            void addDiff(string key, object sourceVal, object destVal,string sideToAdd)    //oneSideCompare
             {
                 var hasMap = DictMapFields.TryGetValue(key, out Func<object, object> Map);
-                
+
+
+                if (hasMap && sourceVal != null)
+                    diffSource[MapField(key)] = Map(sourceVal);
+                else
+                {   //all cases which no need map here
+                    if(sideToAdd != "destination")
+                        diffSource[MapField(key)] = sourceVal;
+                }
+
+                if (hasMap && destVal != null)
+                    diffDestination[MapField(key)] = Map(destVal);
+                else
+                {
+                    if (sideToAdd != "source")
+                        diffDestination[MapField(key)] = destVal;
+                }
+                /*
                 if (hasMap && sourceVal != null)
                     diffSource[MapField(key)] = Map(sourceVal);
                 else if(!oneSideCompare)
@@ -196,7 +221,13 @@ namespace Helper.Data
                     diffDestination[MapField(key)] = Map(destVal);
                 else if (!oneSideCompare)
                     diffDestination[MapField(key)] = destVal;
+                */
             }
+        }
+
+        private string FormatDateTimeObjectToString(DateTime dt)
+        {
+            return dt.ToString("yyyy-MM-dd HH:mm:ss");
         }
     }
 }
