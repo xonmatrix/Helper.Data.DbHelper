@@ -187,7 +187,16 @@ namespace Helper.Data
                 if (destVal == null && sourceVal == null)
                     return false;
                 if (sourceVal is IComparable)
+                {
                     return (((IComparable)sourceVal).CompareTo(destVal) != 0);
+                }
+                else
+                {
+                    if (sourceVal is JObject && destVal is JObject)
+                    {
+                        return !JToken.DeepEquals((JObject)sourceVal, (JObject)destVal);
+                    }
+                }
                 return !sourceVal.Equals(destVal);
             }
 
