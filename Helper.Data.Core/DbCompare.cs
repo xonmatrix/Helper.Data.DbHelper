@@ -106,6 +106,9 @@ namespace Helper.Data
                 {
                     var sourceData = (source[intersectKey] is DateTime)? FormatDateTimeObjectToString((DateTime)source[intersectKey]) : source[intersectKey];
                     var destinationData = (destination[intersectKey] is DateTime) ? FormatDateTimeObjectToString((DateTime)destination[intersectKey]) : destination[intersectKey];
+                    if(intersectKey == "AttendedStaff")
+                    {
+                    }
                     if (isDiff(sourceData, destinationData))
                         addDiff(intersectKey, sourceData, destinationData, "both");
                 }
@@ -192,9 +195,9 @@ namespace Helper.Data
                 }
                 else
                 {
-                    if (sourceVal is JObject && destVal is JObject)
+                    if (sourceVal is JToken && destVal is JToken)
                     {
-                        return !JToken.DeepEquals((JObject)sourceVal, (JObject)destVal);
+                        return !JToken.DeepEquals((JToken)sourceVal, (JToken)destVal);
                     }
                 }
                 return !sourceVal.Equals(destVal);
