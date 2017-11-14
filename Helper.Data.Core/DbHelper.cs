@@ -52,6 +52,41 @@ namespace Helper.Data
             }
         }
 
+  
+        public Task InsertIgnoreInto(string tableName, IEnumerable<DbModel> data)
+        {
+            using (var cmd = this.createCommand())
+            using (var query = new DbQuery(cmd))
+            {
+                List<string> values = new List<string>();
+                bool isFirst = true;
+                query.Append("INSERT IGNORE INTO ").Append(tableName);
+        
+                foreach (var d in data)
+                {
+                   
+
+                    if (isFirst)
+                    {
+                        query.Append(" (");
+                        query.Append(string.Join(",", d.Data.Keys));
+                        query.Append(" ) VALUES ");
+                    }
+                    else
+                        query.Append(",");
+
+                    query.Append(" (");
+                    query.Append(string.Join(",", d.Data.Values.Select(v => query.AppendValue(v))));
+                    query.Append(" )");
+                    isFirst = false;
+
+                }
+                query.Append(";");
+
+                return query.ExecuteNonQuery();
+            }
+        }
+
         public Task Insert(string tableName, object data)
         {
             using (var cmd = this.createCommand())
