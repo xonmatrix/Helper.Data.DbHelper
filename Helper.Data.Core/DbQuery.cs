@@ -310,9 +310,9 @@ namespace Helper.Data
                 else
                 {
                     var value = reader.GetValue(i);
-                    if (value is DateTime)
-                        row[reader.GetName(i)] = DateTime.SpecifyKind(reader.GetDateTime(i), DateTimeKind.Local);
-                    else
+                  //  if (value is DateTime)
+                    //    row[reader.GetName(i)] = DateTime.SpecifyKind(reader.GetDateTime(i), DateTimeKind.Local);
+                  //  else
                         row[reader.GetName(i)] = new JValue(value);
 
                 }
