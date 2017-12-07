@@ -232,7 +232,9 @@ namespace Helper.Data
             JArray results = new JArray();
             await this.ExecuteReader((r) =>
             {
-                results.Add(map(r));
+                var obj = map(r);
+                if (obj != null)
+                    results.Add(obj);
                 return true;
             }).ConfigureAwait(false);
 
