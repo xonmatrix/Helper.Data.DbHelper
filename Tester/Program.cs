@@ -11,26 +11,27 @@ namespace Tester
     {
         static void Main(string[] args)
         {
-            DbModel row = new DbModel();
-            row["Name1"] = "asdfasdfsdf";
-            row["Name2"] = "asdfasdfsdfas";
-            row["Name3"] = "dfsdfsdfasd";
-            row["Name4"] = "fasfasdfa";
-            row["Name5"] = "sdfsdfasdfsdfsdfsdfsdf";
-
-            Parallel.For(0, 50  ,async (i) =>
+            Task.Run(async () =>
             {
-                using (DbHelper db = new DbHelper(new MySqlConnection("server=192.168.0.93;port=13306;database=tests;user=dev;password=a993cH0lT3cH;"))) {
-                    for (int j = 0; j < 100000; j++)
+                using (DbHelper db = new DbHelper(new MySqlConnection("server=103.15.233.218;port=3306;database=webtas;user=dev;password=a993cH0lT3cH;")))
+                {
+                    var x =await db.Query("SELECT Id,Name FROM staff").ToDictionary<int, string>();
+                    /*
+                    var x = db.PrepareCacheQuery("SELECT * FROM STAFF WHERE Id ={0}");
+                    for (int j = 0; j < 10000; j++)
                     {
+                        var d = await x.Get(j % 9 + 2);
+                        Console.WriteLine(d["Name"].ToString());
 
-                        await db.Insert("test1", row);
-                        Console.WriteLine("Line : " + i +" Loop: " + j + " Done");
+                        // Console.WriteLine("Line : " + i + " Loop: " + j + " Done");
                     }
+                    x.Dispose();
+                    */
                 }
-            });
 
-            
+            }).Wait();
+            //GC.Collect();
+            Console.ReadLine();
         }
     }
 }

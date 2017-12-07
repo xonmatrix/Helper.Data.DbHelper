@@ -13,6 +13,8 @@ namespace Helper.Data
         private DbConnection conn;
         private DbTransaction currTransaction;
         public SqlEngine DbEngine;
+        public int CommandTimeout { get; set; } = 30;
+
         public DbHelper(DbConnection conn, SqlEngine engine = SqlEngine.MySql)
         {
             this.conn = conn;
@@ -25,8 +27,7 @@ namespace Helper.Data
 
         public Task Insert(string tableName, IEnumerable<DbModel> data)
         {
-            using (var cmd = this.createCommand())
-            using (var query = new DbQuery(cmd))
+            using (var query = new DbQuery(this.createCommand()))
             {
                 List<string> values = new List<string>();
                 bool isFirst = true;
@@ -52,20 +53,16 @@ namespace Helper.Data
             }
         }
 
-  
         public Task InsertIgnoreInto(string tableName, IEnumerable<DbModel> data)
         {
-            using (var cmd = this.createCommand())
-            using (var query = new DbQuery(cmd))
+            using (var query = new DbQuery(this.createCommand()))
             {
                 List<string> values = new List<string>();
                 bool isFirst = true;
                 query.Append("INSERT IGNORE INTO ").Append(tableName);
-        
+
                 foreach (var d in data)
                 {
-                   
-
                     if (isFirst)
                     {
                         query.Append(" (");
@@ -87,29 +84,21 @@ namespace Helper.Data
             }
         }
 
-        public Task Insert(string tableName, object data)
+        public Task Insert(string tableName, JObject data)
         {
-            using (var cmd = this.createCommand())
-            using (var query = new DbQuery(cmd))
+            using (var query = new DbQuery(this.createCommand()))
             {
                 buildInsertQuery(query, tableName, data);
                 return query.ExecuteNonQuery();
             }
         }
 
-        private void buildInsertQuery(DbQuery cmd, string tableName, object data)
+        public Task Insert(string tableName, DbModel data)
         {
-            switch (data)
+            using (var query = new DbQuery(this.createCommand()))
             {
-                case DbModel dbModel:
-                    this.buildInsertQuery(cmd, tableName, dbModel);
-                    break;
-                case JObject jObject:
-                    this.buildInsertQuery(cmd, tableName, jObject);
-                    break;
-                default:
-                    this.buildInsertQuery(cmd, tableName, JObject.FromObject(data));
-                    break;
+                buildInsertQuery(query, tableName, data);
+                return query.ExecuteNonQuery();
             }
         }
 
@@ -171,8 +160,7 @@ namespace Helper.Data
 
         public async Task<int> InsertWithIdentity(string tableName, DbModel data)
         {
-            using (var cmd = this.createCommand())
-            using (var query = new DbQuery(cmd))
+            using (var query = new DbQuery(this.createCommand()))
             {
                 buildInsertQuery(query, tableName, data);
                 if (this.DbEngine == SqlEngine.MSSql)
@@ -188,8 +176,7 @@ namespace Helper.Data
 
         public Task Update(string tableName, DbModel data, string condition, params object[] parameters)
         {
-            using (var cmd = this.createCommand())
-            using (var query = new DbQuery(cmd))
+            using (var query = new DbQuery(this.createCommand()))
             {
                 query.Append("UPDATE ").Append(tableName).Append(" SET ");
                 bool isFirst = true;
@@ -209,8 +196,8 @@ namespace Helper.Data
 
         public Task Delete(string tableName, string condition, params object[] parameters)
         {
-            using (var cmd = this.createCommand())
-            using (var query = new DbQuery(cmd))
+
+            using (var query = new DbQuery(this.createCommand()))
             {
                 query.Append("DELETE FROM ").Append(tableName);
                 query.Where(condition, parameters);
@@ -228,26 +215,27 @@ namespace Helper.Data
         {
             var cmd = this.conn.CreateCommand();
             if (currTransaction != null)
-            {
                 cmd.Transaction = this.currTransaction;
-            }
 
+            cmd.CommandTimeout = this.CommandTimeout;
             return cmd;
         }
 
         public DbQuery Query(string queryString, params object[] parameters)
         {
-            using (var cmd = this.createCommand())
-            {
-                return new DbQuery(cmd).Append(queryString, parameters);
-            }
+            return new DbQuery(this.createCommand()).Append(queryString, parameters);
+        }
 
+        public CachedQuery PrepareCacheQuery(string querystring)
+        {
+            var cq = new CachedQuery(this.createCommand());
+            cq.Prepare(querystring);
+            return cq;
         }
 
         public Task Execute(string queryString, params object[] parameters)
         {
-            using (var cmd = this.createCommand())
-            using (var query = new DbQuery(cmd))
+            using (var query = new DbQuery(this.createCommand()))
             {
                 query.Append(queryString, parameters);
                 return query.ExecuteNonQuery();
@@ -305,9 +293,11 @@ namespace Helper.Data
 
         public void Dispose()
         {
+            if (this.currTransaction != null)
+                this.Rollback();
+
             this.conn.Dispose();
             this.conn = null;
-            System.Diagnostics.Debug.WriteLine("DbHelper Dispose.");
         }
 
     }

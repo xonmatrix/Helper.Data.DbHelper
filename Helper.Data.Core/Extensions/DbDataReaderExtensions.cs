@@ -8,6 +8,33 @@ namespace Helper.Data
 {
     public static class DbDataReaderExtensions
     {
+    
+        public static T Get<T>(this DbDataReader r, string columnName)
+        {
+            if (typeof(T) == typeof(string))
+                return (T)(object)GetString(r, columnName);
+            else if (typeof(T) == typeof(int))
+                return (T)(object)GetInt(r, columnName);
+            else if (typeof(T) == typeof(bool))
+                return (T)(object)GetBoolean(r, columnName);
+            else if (typeof(T) == typeof(double))
+                return (T)(object)GetDouble(r, columnName);
+            else
+                return (T)r.GetValue(r.GetOrdinal(columnName));
+        }
+
+        public static double GetDouble(this DbDataReader r, string columnName, double defaultValue = 0d)
+        {
+            int ordinal = r.GetOrdinal(columnName);
+            if (r.IsDBNull(ordinal))
+                return defaultValue;
+            else if (r.GetFieldType(ordinal) == typeof(decimal))
+                return (double)r.GetDecimal(ordinal);
+            else
+                return r.GetDouble(ordinal);
+
+        }
+
         public static string GetString(this DbDataReader r, string columnName)
         {
             int ordinal = r.GetOrdinal(columnName);

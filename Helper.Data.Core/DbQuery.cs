@@ -12,7 +12,7 @@ namespace Helper.Data
     {
         private DbCommand command;
         private List<string> jsonFields;
-        public DbQuery(DbCommand cmd)
+        internal DbQuery(DbCommand cmd)
         {
             this.command = cmd;
         }
@@ -107,7 +107,6 @@ namespace Helper.Data
             command.CommandText = CommandText.ToString();
             command.CommandType = CommandType.Text;
 
-
             if (command.Connection.State != ConnectionState.Open)
                 command.Connection.Open();
 
@@ -120,22 +119,20 @@ namespace Helper.Data
                         break;
                 }
             }
-
-
+            command.Dispose();
         }
 
-        public Task ExecuteNonQuery()
+        public async Task ExecuteNonQuery()
         {
-
             command.CommandText = CommandText.ToString();
             command.CommandType = CommandType.Text;
 
             if (command.Connection.State != ConnectionState.Open)
                 command.Connection.Open();
 
-            return command.ExecuteNonQueryAsync();
+            await command.ExecuteNonQueryAsync();
+            command.Dispose();
         }
-
 
         #endregion
 
@@ -166,7 +163,6 @@ namespace Helper.Data
         {
             return this.SingleOrDefault<DbModel>(mapToDbModel);
         }
-
 
         public Task<T> Value<T>()
         {
@@ -211,6 +207,17 @@ namespace Helper.Data
         public Task<List<T>> ToList<T>()
         {
             return this.Select<T>(r => mapFieldValue<T>(r, 0));
+        }
+
+        public async Task<Dictionary<T1, T2>> ToDictionary<T1, T2>()
+        {
+            Dictionary<T1, T2> results = new Dictionary<T1, T2>();
+            await this.ExecuteReader((r) =>
+            {
+                results.Add(r.Get<T1>(r.GetName(0)), r.Get<T2>(r.GetName(1)));
+                return true;
+            });
+            return results;
         }
 
         #endregion
@@ -333,10 +340,8 @@ namespace Helper.Data
 
         public void Dispose()
         {
-            System.Diagnostics.Debug.WriteLine("Query dispose");
             this.CommandText = null;
             this.command = null;
         }
-
     }
 }
