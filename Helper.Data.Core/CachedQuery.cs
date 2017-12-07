@@ -39,17 +39,14 @@ namespace Helper.Data
         {
             DbModel result = null;
             if (cache.TryGetValue(id, out result))
-            {
-                Console.WriteLine("CACHE!");
                 return result;
-            }
+            
 
             param.Value = id;
             using (var reader = await cmd.ExecuteReaderAsync().ConfigureAwait(false))
             {
                 if (reader.Read())
                 {
-                    Console.WriteLine("Real!");
                     result = mapToDbModel(reader);
                     cache.Add(id, result);
                     return result;
@@ -97,7 +94,6 @@ namespace Helper.Data
 
         public void Dispose()
         {
-            Console.WriteLine("Disposed!");
             cache.Clear();
             cache = null;
             this.cmd.Dispose();
