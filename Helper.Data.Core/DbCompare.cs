@@ -107,11 +107,7 @@ namespace Helper.Data
                 {
                     var sourceData = (source[intersectKey] is DateTime) ? FormatDateTimeObjectToString((DateTime)source[intersectKey]) : source[intersectKey];
                     var destinationData = (destination[intersectKey] is DateTime) ? FormatDateTimeObjectToString((DateTime)destination[intersectKey]) : destination[intersectKey];
-                    //var stype = sourceData.GetType();
-                    //var dtype = destinationData.GetType();
-                    if (intersectKey == "AttendedStaff")
-                    {
-                    }
+
                     if (isDiff(sourceData, destinationData))
                         addDiff(intersectKey, sourceData, destinationData, "both");
                 }
