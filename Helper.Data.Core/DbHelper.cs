@@ -52,7 +52,7 @@ namespace Helper.Data
             }
         }
 
-  
+
         public Task InsertIgnoreInto(string tableName, IEnumerable<DbModel> data)
         {
             using (var cmd = this.createCommand())
@@ -61,10 +61,10 @@ namespace Helper.Data
                 List<string> values = new List<string>();
                 bool isFirst = true;
                 query.Append("INSERT IGNORE INTO ").Append(tableName);
-        
+
                 foreach (var d in data)
                 {
-                   
+
 
                     if (isFirst)
                     {
@@ -305,9 +305,11 @@ namespace Helper.Data
 
         public void Dispose()
         {
+            if (this.conn.State == ConnectionState.Open && this.currTransaction != null)
+                this.currTransaction.Rollback();
+
             this.conn.Dispose();
             this.conn = null;
-            System.Diagnostics.Debug.WriteLine("DbHelper Dispose.");
         }
 
     }

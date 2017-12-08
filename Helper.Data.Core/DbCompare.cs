@@ -15,7 +15,8 @@ namespace Helper.Data
 
         public DbCompare(Dictionary<string, string> dictMatchFields = null)
         {
-            this.DictMatchFields = dictMatchFields;
+            if (dictMatchFields != null)
+                this.DictMatchFields = dictMatchFields;
         }
 
         public void IgnoreProperty(params string[] propertyName)
@@ -25,7 +26,7 @@ namespace Helper.Data
 
         public void AddMatchField(string val1, string val2)
         {
-            if(!DictMatchFields.ContainsKey(val1))
+            if (!DictMatchFields.ContainsKey(val1))
                 this.DictMatchFields.Add(val1, val2);
         }
 
@@ -104,7 +105,7 @@ namespace Helper.Data
                 var intersectKeys = source.Data.Keys.Intersect(destination.Data.Keys);
                 foreach (var intersectKey in intersectKeys)
                 {
-                    var sourceData = (source[intersectKey] is DateTime)? FormatDateTimeObjectToString((DateTime)source[intersectKey]) : source[intersectKey];
+                    var sourceData = (source[intersectKey] is DateTime) ? FormatDateTimeObjectToString((DateTime)source[intersectKey]) : source[intersectKey];
                     var destinationData = (destination[intersectKey] is DateTime) ? FormatDateTimeObjectToString((DateTime)destination[intersectKey]) : destination[intersectKey];
                     //var stype = sourceData.GetType();
                     //var dtype = destinationData.GetType();
@@ -205,7 +206,7 @@ namespace Helper.Data
                 return !sourceVal.Equals(destVal);
             }
 
-            void addDiff(string key, object sourceVal, object destVal,string sideToAdd)    //oneSideCompare
+            void addDiff(string key, object sourceVal, object destVal, string sideToAdd)    //oneSideCompare
             {
                 var hasMap = DictMapFields.TryGetValue(key, out Func<object, object> Map);
 
@@ -214,7 +215,7 @@ namespace Helper.Data
                     diffSource[MapField(key)] = Map(sourceVal);
                 else
                 {   //all cases which no need map here
-                    if(sideToAdd != "destination")
+                    if (sideToAdd != "destination")
                         diffSource[MapField(key)] = sourceVal;
                 }
 

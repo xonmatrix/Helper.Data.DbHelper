@@ -232,7 +232,9 @@ namespace Helper.Data
             JArray results = new JArray();
             await this.ExecuteReader((r) =>
             {
-                results.Add(map(r));
+                var res = map(r);
+                if (res != null)
+                    results.Add(res);
                 return true;
             }).ConfigureAwait(false);
 
@@ -310,10 +312,10 @@ namespace Helper.Data
                 else
                 {
                     var value = reader.GetValue(i);
-                  //  if (value is DateTime)
+                    //  if (value is DateTime)
                     //    row[reader.GetName(i)] = DateTime.SpecifyKind(reader.GetDateTime(i), DateTimeKind.Local);
-                  //  else
-                        row[reader.GetName(i)] = new JValue(value);
+                    //  else
+                    row[reader.GetName(i)] = new JValue(value);
 
                 }
             }
@@ -331,7 +333,6 @@ namespace Helper.Data
 
         public void Dispose()
         {
-            System.Diagnostics.Debug.WriteLine("Query dispose");
             this.CommandText = null;
             this.command = null;
         }
