@@ -11,7 +11,7 @@ namespace Helper.Data
 {
     public class CachedQuery
     {
-        private Dictionary<int, DbModel> cache = new Dictionary<int, DbModel>();
+        private Dictionary<int, object> cache = new Dictionary<int, object>();
         private DbCommand cmd;
         private DbParameter param;
         private List<string> jsonFields;
@@ -35,24 +35,28 @@ namespace Helper.Data
             this.cmd.Prepare();
         }
 
-        public async Task<DbModel> Get(int id)
+        public async Task<T> Get<T>(int id, Func<DbDataReader, T> mapper)
         {
-            DbModel result = null;
+            object result = null;
             if (cache.TryGetValue(id, out result))
-                return result;
-            
+                return (T)result;
 
             param.Value = id;
             using (var reader = await cmd.ExecuteReaderAsync().ConfigureAwait(false))
             {
                 if (reader.Read())
                 {
-                    result = mapToDbModel(reader);
+                    result = mapper(reader);
                     cache.Add(id, result);
-                    return result;
+                    return (T)result;
                 }
-                return null;
+                return default(T);
             }
+        }
+
+        public Task<DbModel> Get(int id)
+        {
+            return Get<DbModel>(id, mapToDbModel);
         }
 
         public CachedQuery WithJsonField(params string[] fieldName)
