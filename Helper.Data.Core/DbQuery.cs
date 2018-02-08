@@ -12,7 +12,7 @@ namespace Helper.Data
     {
         private DbCommand command;
         private List<string> jsonFields;
-        public DbQuery(DbCommand cmd)
+        internal DbQuery(DbCommand cmd)
         {
             this.command = cmd;
         }
@@ -107,7 +107,6 @@ namespace Helper.Data
             command.CommandText = CommandText.ToString();
             command.CommandType = CommandType.Text;
 
-
             if (command.Connection.State != ConnectionState.Open)
                 command.Connection.Open();
 
@@ -120,22 +119,20 @@ namespace Helper.Data
                         break;
                 }
             }
-
-
+            command.Dispose();
         }
 
-        public Task ExecuteNonQuery()
+        public async Task ExecuteNonQuery()
         {
-
             command.CommandText = CommandText.ToString();
             command.CommandType = CommandType.Text;
 
             if (command.Connection.State != ConnectionState.Open)
                 command.Connection.Open();
 
-            return command.ExecuteNonQueryAsync();
+            await command.ExecuteNonQueryAsync();
+            command.Dispose();
         }
-
 
         #endregion
 
@@ -166,7 +163,6 @@ namespace Helper.Data
         {
             return this.SingleOrDefault<DbModel>(mapToDbModel);
         }
-
 
         public Task<T> Value<T>()
         {
@@ -213,6 +209,17 @@ namespace Helper.Data
             return this.Select<T>(r => mapFieldValue<T>(r, 0));
         }
 
+        public async Task<Dictionary<T1, T2>> ToDictionary<T1, T2>()
+        {
+            Dictionary<T1, T2> results = new Dictionary<T1, T2>();
+            await this.ExecuteReader((r) =>
+            {
+                results.Add(r.Get<T1>(r.GetName(0)), r.Get<T2>(r.GetName(1)));
+                return true;
+            });
+            return results;
+        }
+
         #endregion
 
         #region Jobject, Jarray
@@ -227,12 +234,14 @@ namespace Helper.Data
             return ToJArray(mapToJObject);
         }
 
-        public async Task<JArray> ToJArray(Func<DbDataReader,JToken> map)
+        public async Task<JArray> ToJArray(Func<DbDataReader, JToken> map)
         {
             JArray results = new JArray();
             await this.ExecuteReader((r) =>
             {
-                results.Add(map(r));
+                var obj = map(r);
+                if (obj != null)
+                    results.Add(obj);
                 return true;
             }).ConfigureAwait(false);
 
@@ -261,6 +270,9 @@ namespace Helper.Data
             if (reader.IsDBNull(index))
                 return default(T);
 
+            if (isJsonField(reader.GetName(index)))
+                return (T)(object)JToken.Parse(reader.GetString(index));
+
             switch (Type.GetTypeCode(typeof(T)))
             {
                 case TypeCode.Int32:
@@ -284,7 +296,13 @@ namespace Helper.Data
                 else if (isJsonField(reader.GetName(i)))
                     result[reader.GetName(i)] = JValue.Parse(reader.GetString(i));
                 else
-                    result[reader.GetName(i)] = reader[i];
+                {
+                    var value = reader[i];
+                    if (value is DateTime)
+                        result[reader.GetName(i)] = DateTime.SpecifyKind(reader.GetDateTime(i), DateTimeKind.Local);
+                    else
+                        result[reader.GetName(i)] = reader[i];
+                }
             }
             return result;
         }
@@ -299,7 +317,14 @@ namespace Helper.Data
                 else if (isJsonField(reader.GetName(i)))
                     row[reader.GetName(i)] = JValue.Parse(reader.GetString(i));
                 else
-                    row[reader.GetName(i)] = new JValue(reader.GetValue(i));
+                {
+                    var value = reader.GetValue(i);
+                    //  if (value is DateTime)
+                    //    row[reader.GetName(i)] = DateTime.SpecifyKind(reader.GetDateTime(i), DateTimeKind.Local);
+                    //  else
+                    row[reader.GetName(i)] = new JValue(value);
+
+                }
             }
             return row;
         }
@@ -315,10 +340,8 @@ namespace Helper.Data
 
         public void Dispose()
         {
-            System.Diagnostics.Debug.WriteLine("Query dispose");
             this.CommandText = null;
             this.command = null;
         }
-
     }
 }

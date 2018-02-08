@@ -7,3 +7,5 @@
 /Tester/obj
 /Tester/bin
 /.vs
+/Helper.Data.Core/bin/Release/netstandard2.0
+/Helper.Data.Core/bin/Debug

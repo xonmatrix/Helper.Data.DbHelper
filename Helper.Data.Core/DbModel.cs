@@ -142,7 +142,7 @@ namespace Helper.Data
                         reader.Read();
                         if (reader.TokenType == JsonToken.Date)
                         {
-                            result[name] = ((DateTime)serializer.Deserialize(reader)).ToLocalTime();
+                            result[name] = (DateTime)reader.Value;
                         }
                         else if (reader.TokenType == JsonToken.Integer)
                         {
