@@ -9,3 +9,5 @@
 /.vs
 /Helper.Data.Core/bin/Release/netstandard2.0
 /Helper.Data.Core/bin/Debug
+/Helper.Data.Net4/Helper.Data.Net4/bin/Release
+/Helper.Data.Net4/Helper.Data.Net4/obj
