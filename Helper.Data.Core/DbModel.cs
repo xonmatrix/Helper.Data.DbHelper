@@ -51,8 +51,10 @@ namespace Helper.Data
             object i = this[name];
             if (i == null)
                 return false;
-            else if (i.GetType() == typeof(SByte))
+            else if (i.GetType() == typeof(sbyte))
                 return ((sbyte)i) > 0;
+            else if (i.GetType() == typeof(byte))
+                return ((byte)i) > 0;
             else
                 return (bool)i;
 

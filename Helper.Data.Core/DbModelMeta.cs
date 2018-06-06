@@ -47,7 +47,7 @@ namespace Helper.Data
             return res;
         }
 
-        public async Task<(JObject Source, JObject Dest)> CompareModel(DbModel source, DbModel destination)
+        public async Task<Tuple<JObject,JObject>> CompareModel(DbModel source, DbModel destination)
         {
             foreach (var key in source.Data.Keys.ToArray().Intersect(this.ignoredColumns))
                 source.Data.Remove(key);
@@ -56,20 +56,20 @@ namespace Helper.Data
                 destination.Data.Remove(key);
 
 
-            (DbModel source, DbModel dest) res = (new DbModel(), new DbModel());
+            Tuple<DbModel,DbModel> res = new Tuple<DbModel, DbModel>(new DbModel(), new DbModel());
 
             //Property exists in source, but not dest.
             foreach (var key in source.Data.Keys.Except(destination.Data.Keys))
             {
-                res.source[key] = source[key];
-                res.dest[key] = null;
+                res.Item1[key] = source[key];
+                res.Item2[key] = null;
             }
 
             //Property exists in dest but not in source.
             foreach (var key in destination.Data.Keys.Except(source.Data.Keys))
             {
-                res.dest[key] = destination[key];
-                res.source[key] = null;
+                res.Item2[key] = destination[key];
+                res.Item1[key] = null;
             }
 
             //Cross compare for same fields.
@@ -77,12 +77,12 @@ namespace Helper.Data
             {
                 if (isValueDiff(source[key], destination[key]))
                 {
-                    res.source[key] = source[key];
-                    res.dest[key] = destination[key];
+                    res.Item1[key] = source[key];
+                    res.Item2[key] = destination[key];
                 }
             }
 
-            return (await Print(res.source), await Print(res.dest));
+            return new Tuple<JObject, JObject>(await Print(res.Item1), await Print(res.Item2));
 
             bool isValueDiff(object sVal,object dVal)
             {

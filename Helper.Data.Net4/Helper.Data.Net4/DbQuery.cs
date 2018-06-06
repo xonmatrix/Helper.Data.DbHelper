@@ -10,7 +10,6 @@ namespace Helper.Data.Net4
     public class DbQuery : IDisposable
     {
         private DbCommand command;
-        private List<string> jsonFields;
         internal DbQuery(DbCommand cmd)
         {
             this.command = cmd;

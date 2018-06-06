@@ -6,12 +6,14 @@ using System.Threading.Tasks;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 using System.Data.Common;
+
 namespace Helper.Data
 {
     public class DbQuery : IDisposable
     {
         private DbCommand command;
         private List<string> jsonFields;
+
         internal DbQuery(DbCommand cmd)
         {
             this.command = cmd;
