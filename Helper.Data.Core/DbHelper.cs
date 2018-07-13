@@ -174,7 +174,7 @@ namespace Helper.Data
 
         #endregion
 
-        public Task Update(string tableName, DbModel data, string condition, params object[] parameters)
+        public Task<int> Update(string tableName, DbModel data, string condition, params object[] parameters)
         {
             using (var query = new DbQuery(this.createCommand()))
             {
@@ -194,7 +194,7 @@ namespace Helper.Data
             }
         }
 
-        public Task Delete(string tableName, string condition, params object[] parameters)
+        public Task<int> Delete(string tableName, string condition, params object[] parameters)
         {
 
             using (var query = new DbQuery(this.createCommand()))

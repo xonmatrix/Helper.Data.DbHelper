@@ -124,7 +124,7 @@ namespace Helper.Data
             command.Dispose();
         }
 
-        public async Task ExecuteNonQuery()
+        public async Task<int> ExecuteNonQuery()
         {
             command.CommandText = CommandText.ToString();
             command.CommandType = CommandType.Text;
@@ -132,8 +132,9 @@ namespace Helper.Data
             if (command.Connection.State != ConnectionState.Open)
                 command.Connection.Open();
 
-            await command.ExecuteNonQueryAsync();
+            int res = await command.ExecuteNonQueryAsync();
             command.Dispose();
+            return res;
         }
 
         #endregion

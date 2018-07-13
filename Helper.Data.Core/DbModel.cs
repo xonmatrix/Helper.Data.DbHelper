@@ -27,6 +27,29 @@ namespace Helper.Data
             }
         }
 
+        public List<DbModel> List(string name)
+        {
+            return this.List<DbModel>(name);
+        }
+
+        public List<T> List<T>(string name)
+        {
+            object i = this[name];
+            if (i == null)
+                return new List<T>();
+            if (i.GetType() == typeof(JArray))
+            {
+                List<T> t = new List<T>();
+                foreach (var j in (JArray)i)
+                {
+                    t.Add(j.ToObject<T>());
+                }
+                return t;
+            }
+            else
+                return (List<T>)i;
+        }
+
         public int Int(string name)
         {
             object i = this[name];
@@ -43,7 +66,6 @@ namespace Helper.Data
                 return "";
             else
                 return i.ToString();
-
         }
 
         public bool Bool(string name)
@@ -57,7 +79,26 @@ namespace Helper.Data
                 return ((byte)i) > 0;
             else
                 return (bool)i;
+        }
 
+        public decimal Decimal(string name)
+        {
+            object i = this[name];
+            if (i == null)
+                return 0;
+            else if (i.GetType() == typeof(decimal))
+                return (decimal)i;
+            else
+                return Convert.ToDecimal(name); //try to convert
+        }
+
+        public void RemoveProperties(params string[] props)
+        {
+            foreach (var p in props)
+            {
+                if (Data.ContainsKey(p))
+                    Data.Remove(p);
+            }
         }
 
         public override bool TryGetMember(GetMemberBinder binder, out object result)
@@ -70,41 +111,7 @@ namespace Helper.Data
             Data[binder.Name] = value;
             return true;
         }
-
-        public List<string> CompareTo(DbModel b)
-        {
-            List<string> diff = new List<string>();
-            foreach (var key in Data.Keys)
-            {
-                var val2 = b[key];
-                var val1 = Data[key];
-                if (val1 == null)
-                {
-                    if (val2 != null)
-                        diff.Add(key);
-                }
-                else if (val2 == null)
-                {
-                    diff.Add(key);
-                }
-                else
-                {
-                    if (val1 is IComparable)
-                    {
-                        if (((IComparable)val1).CompareTo(val2) != 0)
-                            diff.Add(key);
-                    }
-                    else if (!val1.Equals(val2))
-                        diff.Add(key);
-
-                }
-            }
-
-            return diff;
-        }
-
     }
-
 
     public class DbModelConverter : JsonConverter
     {
