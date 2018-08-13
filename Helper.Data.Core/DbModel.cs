@@ -92,6 +92,15 @@ namespace Helper.Data
                 return Convert.ToDecimal(name); //try to convert
         }
 
+        public DbModel Merge(DbModel source)
+        {
+            foreach(var key in source.Data)
+            {
+                this[key.Key] = key.Value;
+            }
+            return this;
+        }
+
         public void RemoveProperties(params string[] props)
         {
             foreach (var p in props)
