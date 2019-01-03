@@ -92,6 +92,36 @@ namespace Helper.Data
                 return Convert.ToDecimal(name); //try to convert
         }
 
+        public DateTime? DateTime(string name)
+        {
+            object i = this[name];
+            if (i == null)
+                return null;
+            else if (i.GetType() == typeof(DateTime))
+            {
+                var dt = (DateTime)i;
+                if (dt.Kind == DateTimeKind.Utc)
+                    return dt.ToLocalTime();
+                else
+                    return dt;
+            }
+            else if (i.GetType() == typeof(int))
+            {
+                return DateTimeOffset.FromUnixTimeSeconds((long)i).LocalDateTime;
+            }
+            else if(i.GetType() == typeof(string))
+            {
+                if (System.DateTime.TryParse(i.ToString(), out var dt))
+                {
+                    return dt;
+                }
+                else
+                    return null;
+            }
+            else
+                return null;
+        }
+
         public DbModel Merge(DbModel source)
         {
             foreach(var key in source.Data)
@@ -160,7 +190,11 @@ namespace Helper.Data
                         reader.Read();
                         if (reader.TokenType == JsonToken.Date)
                         {
-                            result[name] = (DateTime)reader.Value;
+                            DateTime dt = (DateTime)reader.Value;
+                            if (dt.Kind == DateTimeKind.Utc)
+                                result[name] = dt.ToLocalTime();
+                            else
+                                result[name] = dt;
                         }
                         else if (reader.TokenType == JsonToken.Integer)
                         {
