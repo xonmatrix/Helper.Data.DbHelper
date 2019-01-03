@@ -270,7 +270,7 @@ namespace Helper.Data
             if (reader.IsDBNull(index))
                 return default(T);
 
-            if (isJsonField(reader.GetName(index)))
+            if (isJsonField(reader.GetName(index)) || typeof(T) == typeof(JToken))
                 return (T)(object)JToken.Parse(reader.GetString(index));
 
             switch (Type.GetTypeCode(typeof(T)))

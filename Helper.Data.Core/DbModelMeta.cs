@@ -34,20 +34,23 @@ namespace Helper.Data
         public async Task<JObject> Print(DbModel model)
         {
             JObject res = new JObject();
-            foreach(var key in model.Data.Keys)
+            foreach (var key in model.Data.Keys)
             {
                 if (this.ignoredColumns.Contains(key))
                     continue;
 
+
                 var shouldMapVal = valueMapperTask.TryGetValue(key, out Func<object, Task<object>> mapValueTask);
                 var shouldMapName = fieldNameMap.TryGetValue(key, out string keyName);
-
-                res[shouldMapName ? keyName : key] = JToken.FromObject(shouldMapVal ? await mapValueTask(model[key]) : model[key]);
+                if (model[key] == null)
+                    res[shouldMapName ? keyName : key] = "";
+                else
+                    res[shouldMapName ? keyName : key] = JToken.FromObject(shouldMapVal ? await mapValueTask(model[key]) : model[key]);
             }
             return res;
         }
 
-        public async Task<(JObject Source, JObject Dest)> CompareModel(DbModel source, DbModel destination)
+        public async Task<Tuple<JObject, JObject>> CompareModel(DbModel source, DbModel destination)
         {
             foreach (var key in source.Data.Keys.ToArray().Intersect(this.ignoredColumns))
                 source.Data.Remove(key);
@@ -82,28 +85,28 @@ namespace Helper.Data
                 }
             }
 
-            return (await Print(res.source), await Print(res.dest));
+            return new Tuple<JObject, JObject>(await Print(res.source), await Print(res.dest));
 
-            bool isValueDiff(object sVal,object dVal)
+            bool isValueDiff(object sVal, object dVal)
             {
                 if (sVal == null && dVal == null)
-                    return false ;
+                    return false;
 
                 if (sVal != null && dVal == null)
                     return true;
 
-                if(sVal == null && dVal != null)
+                if (sVal == null && dVal != null)
                     return true;
 
-                if(sVal is IComparable)
+                if (sVal is IComparable)
                     return (((IComparable)sVal).CompareTo(dVal) != 0);
-                
-                if(sVal is JToken && dVal is JToken)
+
+                if (sVal is JToken && dVal is JToken)
                     return !JToken.DeepEquals(sVal as JToken, dVal as JToken);
-                
+
 
                 return !sVal.Equals(dVal);
-                        
+
             }
         }
 

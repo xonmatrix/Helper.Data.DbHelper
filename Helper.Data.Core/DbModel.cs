@@ -53,6 +53,8 @@ namespace Helper.Data
                 return false;
             else if (i.GetType() == typeof(SByte))
                 return ((sbyte)i) > 0;
+            else if (i.GetType() == typeof(byte))
+                return ((byte)i) > 0;
             else
                 return (bool)i;
 
