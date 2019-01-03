@@ -6,12 +6,14 @@ using System.Threading.Tasks;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 using System.Data.Common;
+
 namespace Helper.Data
 {
     public class DbQuery : IDisposable
     {
         private DbCommand command;
         private List<string> jsonFields;
+
         internal DbQuery(DbCommand cmd)
         {
             this.command = cmd;
@@ -122,7 +124,7 @@ namespace Helper.Data
             command.Dispose();
         }
 
-        public async Task ExecuteNonQuery()
+        public async Task<int> ExecuteNonQuery()
         {
             command.CommandText = CommandText.ToString();
             command.CommandType = CommandType.Text;
@@ -130,8 +132,9 @@ namespace Helper.Data
             if (command.Connection.State != ConnectionState.Open)
                 command.Connection.Open();
 
-            await command.ExecuteNonQueryAsync();
+            int res = await command.ExecuteNonQueryAsync();
             command.Dispose();
+            return res;
         }
 
         #endregion
