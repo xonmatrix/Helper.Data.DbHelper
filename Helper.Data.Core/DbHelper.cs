@@ -53,6 +53,34 @@ namespace Helper.Data
             }
         }
 
+        public Task Insert(string tableName, JArray data)
+        {
+            using (var query = new DbQuery(this.createCommand()))
+            {
+                List<string> values = new List<string>();
+                bool isFirst = true;
+                query.Append("INSERT INTO ").Append(tableName);
+                foreach (JObject d in data)
+                {
+                    if (isFirst)
+                    {
+                        query.Append(" (");
+                        query.Append(string.Join(",", d.Properties().Select(a => a.Name)));
+                        query.Append(" ) VALUES ");
+                    }
+                    else
+                        query.Append(",");
+
+                    query.Append(" (");
+                    query.Append(string.Join(",", d.Properties().Select(a => query.AppendValue(convertJToKenValue(a.Value)))));
+                    query.Append(" )");
+                    isFirst = false;
+                }
+                query.Append(";");
+                return query.ExecuteNonQuery();
+            }
+        }
+
         public Task InsertIgnoreInto(string tableName, IEnumerable<DbModel> data)
         {
             using (var query = new DbQuery(this.createCommand()))
@@ -102,6 +130,30 @@ namespace Helper.Data
             }
         }
 
+        private object convertJToKenValue(JToken property)
+        {
+            switch (property.Type)
+            {
+                case JTokenType.Boolean:
+                    return property.Value<bool>();
+                case JTokenType.Bytes:
+                    return property.Value<byte[]>();
+                case JTokenType.Date:
+                    var dt = property.Value<DateTime>();
+                    if (dt.Kind == DateTimeKind.Utc)
+                        dt = dt.ToLocalTime();
+                    return dt;
+                case JTokenType.Float:
+                    return property.Value<float>();
+                case JTokenType.Integer:
+                    return property.Value<int>();
+                case JTokenType.String:
+                    return property.Value<string>();
+                default:
+                    return property;
+            }
+        }
+
         private void buildInsertQuery(DbQuery cmd, string tableName, JObject data)
         {
             List<string> values = new List<string>();
@@ -112,31 +164,7 @@ namespace Helper.Data
                 if (!isFirst)
                     cmd.Append(",");
                 cmd.Append(pair.Key);
-                switch (pair.Value.Type)
-                {
-                    case JTokenType.Boolean:
-                        values.Add(cmd.AppendValue(pair.Value.Value<bool>()));
-                        break;
-                    case JTokenType.Bytes:
-                        values.Add(cmd.AppendValue(pair.Value.Value<byte[]>()));
-                        break;
-                    case JTokenType.Date:
-                        values.Add(cmd.AppendValue(pair.Value.Value<DateTime>()));
-                        break;
-                    case JTokenType.Float:
-                        values.Add(cmd.AppendValue(pair.Value.Value<float>()));
-                        break;
-                    case JTokenType.Integer:
-                        values.Add(cmd.AppendValue(pair.Value.Value<int>()));
-                        break;
-                    case JTokenType.String:
-                        values.Add(cmd.AppendValue(pair.Value.Value<string>()));
-                        break;
-                    default:
-                        values.Add(cmd.AppendValue(pair.Value));
-                        break;
-                }
-
+                values.Add(cmd.AppendValue(convertJToKenValue(pair.Value)));
                 isFirst = false;
             }
             cmd.Append(") VALUES (").Append(string.Join(",", values)).Append(");");
@@ -159,6 +187,20 @@ namespace Helper.Data
         }
 
         public async Task<int> InsertWithIdentity(string tableName, DbModel data)
+        {
+            using (var query = new DbQuery(this.createCommand()))
+            {
+                buildInsertQuery(query, tableName, data);
+                if (this.DbEngine == SqlEngine.MSSql)
+                    query.Append("SELECT SCOPE_IDENTITY();");
+                else if (this.DbEngine == SqlEngine.MySql)
+                    query.Append("SELECT LAST_INSERT_ID();");
+
+                return await query.Value<int>();
+            }
+        }
+
+        public async Task<int> InsertWithIdentity(string tableName, JObject data)
         {
             using (var query = new DbQuery(this.createCommand()))
             {

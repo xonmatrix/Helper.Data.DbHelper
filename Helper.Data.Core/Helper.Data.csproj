@@ -5,10 +5,13 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageId>Helper.Data.DbHelper</PackageId>
     <Authors>Xonmatrix</Authors>
-    <Version>1.0.2</Version>
+    <Version>1.0.4</Version>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <Description />
     <Product>Helper.Data.DbHelper</Product>
+    <PackageLicenseUrl></PackageLicenseUrl>
+    <PackageReleaseNotes>- Auto convert UTC Kind Datetime to local
+- Support bulk insert JArray</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

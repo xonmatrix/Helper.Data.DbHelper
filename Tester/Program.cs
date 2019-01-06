@@ -12,18 +12,25 @@ namespace Tester
     {
         static void Main(string[] args)
         {
-            Task.Run(() =>
+            Task.Run(async() =>
             {
-                JObject x = new JObject();
-                var arr = new JArray();
-                arr.Add("123");
-                arr.Add("456");
-                arr.Add("789");
-                x["Arr"] = arr;
+                JArray res = new JArray();
+                JObject custA = new JObject();
+                custA["Name"] = "Cust T";
+                custA["Balance"] = 13.00d;
+                res.Add(custA);
 
-                DbModel cont = x.ToObject<DbModel>();
-                var w = cont.List("Arr");
-            }).Wait();
+                JObject custb = new JObject();
+                custb["Name"] = "Cust T";
+                custb["Balance"] = 13.00d;
+                res.Add(custb);
+
+                using(var db = new DbHelper(new MySqlConnection("server=localhost;port=13306;uid=root;password=a993cH0lT3cH;database=ktapp")))
+                {
+                    await db.Insert("account", res);
+                }
+
+            }).GetAwaiter().GetResult();
             //GC.Collect();
             Console.ReadLine();
         }
