@@ -67,7 +67,7 @@ namespace Helper.Data
             }
             else
             {
-                string key = $"@Va{valueCount++}";
+                string key = $"@VAL_{valueCount++}";
                 switch (value)
                 {
                     case JObject jo:
@@ -75,6 +75,9 @@ namespace Helper.Data
                         break;
                     case JArray ja:
                         this.appendCommand(key, ja.ToString());
+                        break;
+                    case null:
+                        this.appendCommand(key, DBNull.Value);
                         break;
                     default:
                         this.appendCommand(key, value);
@@ -133,7 +136,8 @@ namespace Helper.Data
                 command.Connection.Open();
 
             int res = await command.ExecuteNonQueryAsync();
-            command.Dispose();
+            if (command != null)
+                command.Dispose();
             return res;
         }
 

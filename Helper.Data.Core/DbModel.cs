@@ -89,7 +89,7 @@ namespace Helper.Data
             else if (i.GetType() == typeof(decimal))
                 return (decimal)i;
             else
-                return Convert.ToDecimal(name); //try to convert
+                return Convert.ToDecimal(i); //try to convert
         }
 
         public DateTime? DateTime(string name)
