@@ -44,6 +44,11 @@ namespace Helper.Data
             return this;
         }
 
+        public DbQuery AppendColIn(string colName, params object[] parameters)
+        {
+            return this.Append($" {colName} IN ({string.Join(",", parameters.Select(p => this.AppendCondition(p)))})");
+        }
+
         private void appendCommand(string key, object value)
         {
             var parameter = this.command.CreateParameter();
@@ -98,9 +103,15 @@ namespace Helper.Data
 
         public DbQuery And(string query, params object[] parameters)
         {
-            this.Append(" AND ");
-            this.Append(query, parameters);
-            return this;
+            return this.Append(" AND ")
+                       .Append(query, parameters);
+
+        }
+
+        public DbQuery AndColIn(string colName, params object[] parameters)
+        {
+            return this.Append(" AND ")
+                .AppendColIn(colName, parameters);
         }
 
         #endregion
@@ -115,8 +126,7 @@ namespace Helper.Data
             if (command.Connection.State != ConnectionState.Open)
                 command.Connection.Open();
 
-
-            using (var reader = await command.ExecuteReaderAsync().ConfigureAwait(false))
+            using (var reader = await command.ExecuteReaderAsync())
             {
                 while (reader.Read())
                 {
