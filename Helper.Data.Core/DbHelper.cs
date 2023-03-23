@@ -186,16 +186,20 @@ namespace Helper.Data
             cmd.Append(") VALUES (").Append(string.Join(",", values)).Append(");");
         }
 
-        public async Task<int> InsertWithIdentity(string tableName, DbModel data)
+        private void appendQuerySelectIdentity(DbQuery query)
+        {
+            if (this.DbEngine == SqlEngine.MSSql)
+                query.Append("SELECT CAST(SCOPE_IDENTITY() AS INT);");
+            else if (this.DbEngine == SqlEngine.MySql)
+                query.Append("SELECT LAST_INSERT_ID();");
+        }
+
+        public async Task<int> InsertWithIdentity(string tableName, DbModel data) 
         {
             using (var query = new DbQuery(this.createCommand()))
             {
                 buildInsertQuery(query, tableName, data);
-                if (this.DbEngine == SqlEngine.MSSql)
-                    query.Append("SELECT SCOPE_IDENTITY();");
-                else if (this.DbEngine == SqlEngine.MySql)
-                    query.Append("SELECT LAST_INSERT_ID();");
-
+                appendQuerySelectIdentity(query);
                 return await query.Value<int>();
             }
         }
@@ -205,11 +209,7 @@ namespace Helper.Data
             using (var query = new DbQuery(this.createCommand()))
             {
                 buildInsertQuery(query, tableName, data);
-                if (this.DbEngine == SqlEngine.MSSql)
-                    query.Append("SELECT SCOPE_IDENTITY();");
-                else if (this.DbEngine == SqlEngine.MySql)
-                    query.Append("SELECT LAST_INSERT_ID();");
-
+                appendQuerySelectIdentity(query);
                 return await query.Value<int>();
             }
         }
@@ -286,7 +286,7 @@ namespace Helper.Data
 
         #endregion
 
-        #region Trasacion 
+        #region Transaction 
 
         public void BeginTransaction()
         {
